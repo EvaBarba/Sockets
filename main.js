@@ -1,0 +1,66 @@
+
+const user = require("./cmds_user.js");
+const quiz = require("./cmds_quiz.js");
+const favs = require("./cmds_favs.js");
+const readline = require('readline');
+const net = require('net');                   //modulo integrado en node.js
+
+let server = net.createServer((socket) => {   //genera la conexion (socket del servidor)
+  
+  console.log('Nuevo cliente conectado', socket.remotePort);
+
+  const rl = readline.createInterface({
+    input: socket,
+    output: socket,
+    prompt: "> "
+  });
+  rl.log = (msg) => socket.write(msg + '\n');  // Add log to rl interface
+  rl.questionP = function (string) {   // Add questionP to rl interface
+    return new Promise ( (resolve) => {
+      this.question(`  ${string}: `, (answer) => resolve(answer.trim()))
+    })
+  };
+  
+  rl.prompt();
+  
+  rl.on('line', async (line) => {
+    let cmd = line.trim()
+    try{
+      
+  
+      if      ('' ===cmd)   {}
+      else if ('h' ===cmd)  { user.help(rl);}
+  
+      else if (['lu', 'ul', 'u'].includes(cmd)) { await user.list(rl);}
+      else if (['cu', 'uc'].includes(cmd))      { await user.create(rl);}
+      else if (['ru', 'ur', 'r'].includes(cmd)) { await user.read(rl);}
+      else if (['uu'].includes(cmd))            { await user.update(rl);}
+      else if (['du', 'ud'].includes(cmd))      { await user.delete(rl);}
+  
+      else if (['lq', 'ql', 'q'].includes(cmd)) { await quiz.list(rl);}
+      else if (['cq', 'qc'].includes(cmd))      { await quiz.create(rl);}
+      else if (['tq', 'qt', 't'].includes(cmd)) { await quiz.test(rl);}
+      else if (['uq', 'qu'].includes(cmd))      { await quiz.update(rl);}
+      else if (['dq', 'qd'].includes(cmd))      { await quiz.delete(rl);}
+  
+      else if (['lf', 'fl', 'f'].includes(cmd)) { await favs.list(rl);}
+      else if (['cf', 'fc'].includes(cmd))      { await favs.create(rl);}
+      else if (['df', 'fd'].includes(cmd))      { await favs.delete(rl);}
+  
+      else if ('e'===cmd)  { rl.log('Bye!'); socket.end();}
+      else                 {  rl.log('UNSUPPORTED COMMAND!');
+                              user.help(rl);
+                           };
+      } catch (err) { rl.log(`  ${err}`);}
+      finally       { if ('e' !== cmd) rl.prompt(); }
+    });
+
+    socket.on('end', () => {    //Para cualquier causa en el que el socket se cierra (no solo asociado a acuando se pulsa e)
+      console.log('Cliente desconectado', socket.remotePort);
+    });
+});
+
+server.listen(8080);                          //escucha peticiones en un puerto determinado
+
+
+
